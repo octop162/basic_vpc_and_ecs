@@ -22,8 +22,8 @@ resource "aws_security_group" "alb" {
   }
 
   ingress {
-    from_port   = 443
-    to_port     = 443
+    from_port   = 20080
+    to_port     = 20080
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -80,9 +80,9 @@ resource "aws_lb" "main" {
   })
 }
 
-# ALB Target Group
-resource "aws_lb_target_group" "main" {
-  name        = "web-tg"
+# ALB Target Group - Blue
+resource "aws_lb_target_group" "blue" {
+  name        = "web-tg-blue"
   port        = var.container_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -101,19 +101,74 @@ resource "aws_lb_target_group" "main" {
   }
 
   tags = merge(var.tags, {
-    Name = "web-tg"
+    Name = "web-tg-blue"
   })
 }
 
-# ALB Listener
+# ALB Target Group - Green
+resource "aws_lb_target_group" "green" {
+  name        = "web-tg-green"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 30
+    path                = "/"
+    matcher             = "200"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+  }
+
+  tags = merge(var.tags, {
+    Name = "web-tg-green"
+  })
+}
+
+# ALB Listener - Production
 resource "aws_lb_listener" "main" {
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.main.arn
+    type = "forward"
+    forward {
+      target_group {
+        arn    = aws_lb_target_group.blue.arn
+        weight = 0
+      }
+      target_group {
+        arn    = aws_lb_target_group.green.arn
+        weight = 100
+      }
+    }
+  }
+}
+
+# Test Listener for Blue/Green deployment
+resource "aws_lb_listener" "test" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "20080"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "forward"
+    forward {
+      target_group {
+        arn    = aws_lb_target_group.blue.arn
+        weight = 0
+      }
+      target_group {
+        arn    = aws_lb_target_group.green.arn
+        weight = 100
+      }
+    }
   }
 }
 
@@ -180,7 +235,7 @@ resource "aws_ecs_service" "main" {
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.main.arn
+    target_group_arn = aws_lb_target_group.blue.arn
     container_name   = "web"
     container_port   = var.container_port
   }
