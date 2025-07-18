@@ -23,32 +23,6 @@ variable "tokyo_private_subnet_cidrs" {
   default     = ["10.0.101.0/24", "10.0.102.0/24"]
 }
 
-# Osaka Region Variables
-variable "osaka_vpc_cidr" {
-  description = "CIDR block for Osaka VPC"
-  type        = string
-  default     = "10.1.0.0/16"
-}
-
-variable "osaka_availability_zones" {
-  description = "List of availability zones in Osaka"
-  type        = list(string)
-  default     = ["ap-northeast-3a", "ap-northeast-3c"]
-}
-
-variable "osaka_public_subnet_cidrs" {
-  description = "CIDR blocks for Osaka public subnets"
-  type        = list(string)
-  default     = ["10.1.1.0/24", "10.1.2.0/24"]
-}
-
-variable "osaka_private_subnet_cidrs" {
-  description = "CIDR blocks for Osaka private subnets"
-  type        = list(string)
-  default     = ["10.1.101.0/24", "10.1.102.0/24"]
-}
-
-
 variable "common_tags" {
   description = "Common tags to apply to all resources"
   type        = map(string)

@@ -4,8 +4,8 @@
 
 ## 構成
 
-- **VPC**: Virtual Private Cloud、パブリック・プライベートサブネット
-- **S3**: オブジェクトストレージ
+- **VPC**: Virtual Private Cloud、パブリック・プライベートサブネット、NATゲートウェイ
+- **ALB + ECS**: Application Load Balancer + ECS Fargate（Blue/Green デプロイメント対応）
 
 ## ディレクトリ構造
 
@@ -19,7 +19,7 @@
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
-│   └── s3/                # S3モジュール
+│   └── web/               # ALB + ECS モジュール
 │       ├── main.tf
 │       ├── variables.tf
 │       └── outputs.tf
@@ -108,18 +108,27 @@ make quality
 
 `variables.tf`で以下の設定を変更できます：
 
-- `aws_region`: AWSリージョン (デフォルト: ap-northeast-1)
-- `vpc_cidr`: VPCのCIDRブロック (デフォルト: 10.0.0.0/16)
-- `s3_bucket_name`: S3バケット名
+#### VPC設定
+- `tokyo_vpc_cidr`: 東京リージョンVPCのCIDRブロック (デフォルト: 10.0.0.0/16)
+- `tokyo_availability_zones`: 使用するアベイラビリティゾーン
+- `tokyo_public_subnet_cidrs`: パブリックサブネットのCIDRブロック
+- `tokyo_private_subnet_cidrs`: プライベートサブネットのCIDRブロック
+
+#### Web設定
+- `container_image`: ECSで使用するコンテナイメージ (デフォルト: nginx:latest)
+- `container_port`: コンテナポート (デフォルト: 80)
+- `desired_count`: ECSタスク数 (デフォルト: 2)
+
+#### 共通設定
 - `common_tags`: 共通タグ
 
 ### terraform.tfvarsファイルの作成
 
 ```bash
 # terraform.tfvars
-aws_region = "us-west-2"
-vpc_cidr = "10.1.0.0/16"
-s3_bucket_name = "my-unique-bucket-name"
+tokyo_vpc_cidr = "10.1.0.0/16"
+tokyo_public_subnet_cidrs = ["10.1.1.0/24", "10.1.2.0/24"]
+tokyo_private_subnet_cidrs = ["10.1.101.0/24", "10.1.102.0/24"]
 common_tags = {
   Environment = "production"
   Project     = "my-project"
@@ -145,31 +154,31 @@ common_tags = {
 
 ## セキュリティ
 
-- S3バケットはパブリックアクセスをブロック
-- バージョニングとサーバーサイド暗号化を有効化
 - セキュリティグループは最小限の権限で設定
+- ECSタスクはプライベートサブネットで実行
+- ALBは必要なポート（80, 20080）のみ開放
 
 ## トラブルシューティング
 
 ### よくある問題
 
-1. **S3バケット名の競合**
-   - S3バケット名はグローバルで一意である必要があります
-   - `s3_bucket_name`変数を変更してください
-
-2. **AWS認証エラー**
+1. **AWS認証エラー**
    - AWS CLIが正しく設定されているか確認してください
    - `aws configure list`で設定を確認
 
-3. **TFLintエラー**
+2. **TFLintエラー**
    - `tflint --init`でプラグインを初期化してください
+
+3. **ECSタスクが起動しない**
+   - CloudWatch Logsで詳細なエラーログを確認してください
+   - セキュリティグループの設定を確認してください
+
+4. **Blue/Green デプロイメント**
+   - メインリスナー（80番ポート）: 本番環境へのアクセス
+   - テストリスナー（20080番ポート）: 新バージョンのテスト用
 
 ## 貢献
 
 1. フォークしてブランチを作成
 2. 変更を行い、`make quality`でテスト
 3. プルリクエストを作成
-
-## ライセンス
-
-MIT License
