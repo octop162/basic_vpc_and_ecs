@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.4.0"
     }
   }
 }
@@ -72,24 +72,20 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_eip" "nat" {
-  count = length(aws_subnet.public)
-
   domain     = "vpc"
   depends_on = [aws_internet_gateway.main]
 
   tags = merge(var.tags, {
-    Name = "nat-eip-${count.index + 1}"
+    Name = "nat-eip"
   })
 }
 
 resource "aws_nat_gateway" "main" {
-  count = length(aws_subnet.public)
-
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
 
   tags = merge(var.tags, {
-    Name = "nat-gateway-${count.index + 1}"
+    Name = "nat-gateway"
   })
 
   depends_on = [aws_internet_gateway.main]
@@ -102,7 +98,7 @@ resource "aws_route_table" "private" {
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
+    nat_gateway_id = aws_nat_gateway.main.id
   }
 
   tags = merge(var.tags, {
