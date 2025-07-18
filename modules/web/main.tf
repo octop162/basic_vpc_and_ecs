@@ -137,16 +137,11 @@ resource "aws_lb_listener" "main" {
   protocol          = "HTTP"
 
   default_action {
-    type = "forward"
-    forward {
-      target_group {
-        arn    = aws_lb_target_group.blue.arn
-        weight = 0
-      }
-      target_group {
-        arn    = aws_lb_target_group.green.arn
-        weight = 100
-      }
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Forbidden"
+      status_code  = "403"
     }
   }
 
@@ -162,16 +157,11 @@ resource "aws_lb_listener" "test" {
   protocol          = "HTTP"
 
   default_action {
-    type = "forward"
-    forward {
-      target_group {
-        arn    = aws_lb_target_group.blue.arn
-        weight = 0
-      }
-      target_group {
-        arn    = aws_lb_target_group.green.arn
-        weight = 100
-      }
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Forbidden"
+      status_code  = "403"
     }
   }
 
@@ -323,7 +313,7 @@ resource "aws_ecs_service" "main" {
     bake_time_in_minutes = 0
     lifecycle_hook {
       hook_target_arn = aws_lambda_function.ecs_service_hook.arn
-      role_arn = aws_iam_role.lambda_role.arn
+      role_arn = aws_iam_role.ecs_deployment_role.arn
       lifecycle_stages = ["POST_TEST_TRAFFIC_SHIFT"]
     }
   }
