@@ -1,0 +1,9 @@
+{
+  "hooks": {
+    "tool_call": {
+      "Edit": "make fmt && make validate && make lint",
+      "Write": "make fmt && make validate && make lint",
+      "MultiEdit": "make fmt && make validate && make lint"
+    }
+  }
+}
