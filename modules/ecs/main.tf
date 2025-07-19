@@ -80,6 +80,13 @@ resource "aws_ecs_service" "main" {
   task_definition = aws_ecs_task_definition.main.arn
   desired_count   = 0  # ecspresso will manage this
 
+  # Minimal network configuration required for awsvpc mode
+  network_configuration {
+    subnets          = var.private_subnet_ids
+    security_groups  = [aws_security_group.ecs.id]
+  }
+  launch_type      = "FARGATE"
+
   lifecycle {
     ignore_changes = [
       desired_count,
@@ -141,6 +148,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 
 # Data source for current AWS region
 data "aws_region" "current" {}
+
 
 # IAM Role for ECS Deployment
 resource "aws_iam_role" "ecs_deployment_role" {

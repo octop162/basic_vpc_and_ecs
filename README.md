@@ -1,13 +1,18 @@
-# Terraform AWS Infrastructure
+# Terraform + ecspresso AWS Infrastructure
 
-このプロジェクトは、TerraformとAWSを使用してBlue-Greenデプロイメント対応のクラウドインフラストラクチャをモジュール構成で管理します。
+このプロジェクトは、Terraformとecspressoを使用してBlue-Greenデプロイメント対応のクラウドインフラストラクチャを管理します。
 
 ## 構成
 
-- **VPC**: Virtual Private Cloud、パブリック・プライベートサブネット、NATゲートウェイ
-- **ALB**: Application Load Balancer（Web用、API用）
-- **ECS**: ECS Fargate with Blue-Greenデプロイメント
-- **Lambda**: ECSデプロイメントフック
+- **VPC**: Virtual Private Cloud、パブリック・プライベートサブネット、NATゲートウェイ（Terraform管理）
+- **ALB**: Application Load Balancer（Web用、API用）（Terraform管理）
+- **ECS**: ECS Fargate with Blue-Greenデプロイメント（ecspresso管理）
+- **Lambda**: ECSデプロイメントフック（Terraform管理）
+
+## 役割分担
+
+- **Terraform**: インフラストラクチャの基盤リソース（VPC、ALB、IAMロール、Lambda等）
+- **ecspresso**: ECSサービスとタスク定義の運用設定（デプロイ、スケーリング等）
 
 ![](./structure.drawio.svg)
 
@@ -17,6 +22,9 @@
 .
 ├── main.tf                 # メインの設定ファイル
 ├── variables.tf            # 変数定義
+├── ecspresso.yml           # ecspresso設定ファイル
+├── ecs-task-def.json       # ECSタスク定義（ecspresso管理）
+├── ecs-service-def.json    # ECSサービス定義（ecspresso管理）
 ├── modules/
 │   ├── vpc/               # VPCモジュール
 │   │   ├── main.tf
@@ -26,7 +34,7 @@
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
-│   ├── ecs/               # ECSモジュール（配列対応ALB設定）
+│   ├── ecs/               # ECSモジュール（最小構成）
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
@@ -37,6 +45,9 @@
 │       ├── src.zip
 │       └── src/
 │           └── index.py
+├── .devcontainer/         # 開発環境設定
+│   ├── devcontainer.json
+│   └── Dockerfile
 ├── .tflint.hcl            # TFLint設定
 ├── .pre-commit-config.yaml # pre-commitフック設定
 ├── .gitignore             # Git除外設定
@@ -81,8 +92,33 @@ make plan
 # 5. インフラストラクチャのデプロイ
 make apply
 
-# 6. インフラストラクチャの削除
+# 6. ECSサービスのデプロイ
+make ecs-deploy
+
+# 7. インフラストラクチャの削除
 make destroy
+```
+
+### ecspresso コマンド
+
+```bash
+# ECSサービスのデプロイ
+make ecs-deploy
+
+# ECSサービスの状態確認
+make ecs-status
+
+# ECSサービスの差分確認
+make ecs-diff
+
+# ECSサービスの検証
+make ecs-verify
+
+# ECSサービスのロールバック
+make ecs-rollback
+
+# ecspresso設定のレンダリング
+make ecs-render
 ```
 
 ### 開発ワークフロー
@@ -98,40 +134,3 @@ make dev
 # 全品質チェック（format, validate, lint, security）
 make quality
 ```
-
-## アーキテクチャ詳細
-
-### ECSモジュールの特徴
-
-- **複数ALB対応**: `alb_configs`配列を使用して複数のALBからのトラフィックを受信可能
-- **Blue-Greenデプロイメント**: AWS ECS Blue-Greenデプロイメント戦略を使用
-- **ライフサイクルフック**: Lambdaフックによるデプロイメント後処理
-
-### ALB設定例
-
-```hcl
-alb_configs = [
-  {
-    alb_security_group_id  = module.web_alb_tokyo.alb_security_group_id
-    blue_target_group_arn  = module.web_alb_tokyo.blue_target_group_arn
-    green_target_group_arn = module.web_alb_tokyo.green_target_group_arn
-    main_listener_arn      = module.web_alb_tokyo.main_listener_arn
-    main_listener_rule_arn = module.web_alb_tokyo.main_listener_rule_arn
-    test_listener_rule_arn = module.web_alb_tokyo.test_listener_rule_arn
-  },
-  {
-    alb_security_group_id  = module.api_alb_tokyo.alb_security_group_id
-    blue_target_group_arn  = module.api_alb_tokyo.blue_target_group_arn
-    green_target_group_arn = module.api_alb_tokyo.green_target_group_arn
-    main_listener_arn      = module.api_alb_tokyo.main_listener_arn
-    main_listener_rule_arn = module.api_alb_tokyo.main_listener_rule_arn
-    test_listener_rule_arn = module.api_alb_tokyo.test_listener_rule_arn
-  }
-]
-```
-
-## デプロイメント戦略
-
-1. **初回デプロイ**: Blueスロットにアプリケーションをデプロイ
-2. **更新デプロイ**: Greenスロットに新バージョンをデプロイし、段階的にトラフィックを切り替え
-3. **ライフサイクルフック**: デプロイメント完了後にLambda関数が実行され、後処理を実行

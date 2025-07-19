@@ -8,6 +8,11 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "private_subnet_ids" {
+  description = "Private subnet IDs for minimal ECS network configuration"
+  type        = list(string)
+}
+
 # Most variables removed as ecspresso will manage ECS configuration
 
 variable "tags" {

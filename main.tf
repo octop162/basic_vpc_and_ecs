@@ -83,8 +83,9 @@ module "web_ecs_tokyo" {
     aws = aws.tokyo
   }
 
-  name   = "web"
-  vpc_id = module.vpc_tokyo.vpc_id
+  name               = "web"
+  vpc_id             = module.vpc_tokyo.vpc_id
+  private_subnet_ids = module.vpc_tokyo.private_subnet_ids
 
   tags = merge(var.common_tags, {
     Region = "ap-northeast-1"
