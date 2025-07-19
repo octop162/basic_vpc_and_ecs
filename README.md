@@ -9,6 +9,8 @@
 - **ECS**: ECS Fargate with Blue-Greenデプロイメント
 - **Lambda**: ECSデプロイメントフック
 
+![](./structure.drawio.svg)
+
 ## ディレクトリ構造
 
 ```
