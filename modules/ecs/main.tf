@@ -15,10 +15,10 @@ resource "aws_security_group" "ecs" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = var.container_port
-    to_port         = var.container_port
-    protocol        = "tcp"
-    security_groups = [for config in var.alb_configs : config.alb_security_group_id]
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/8"]  # Allow from VPC
   }
 
   egress {
@@ -42,7 +42,7 @@ resource "aws_ecs_cluster" "main" {
   })
 }
 
-# ECS Task Definition
+# Minimal ECS Task Definition for ecspresso management
 resource "aws_ecs_task_definition" "main" {
   family                   = "${var.name}-task"
   network_mode             = "awsvpc"
@@ -51,77 +51,49 @@ resource "aws_ecs_task_definition" "main" {
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+  # Minimal container definition - ecspresso will override
   container_definitions = jsonencode([
     {
-      name  = var.name
-      image = var.container_image
-
-      portMappings = [
-        {
-          containerPort = var.container_port
-          protocol      = "tcp"
-        }
-      ]
-
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs.name
-          awslogs-region        = data.aws_region.current.id
-          awslogs-stream-prefix = "ecs"
-        }
-      }
-
+      name      = var.name
+      image     = "nginx:latest"
       essential = true
     }
   ])
+
+  lifecycle {
+    ignore_changes = [
+      container_definitions,
+      cpu,
+      memory
+    ]
+  }
 
   tags = merge(var.tags, {
     Name = "${var.name}-task"
   })
 }
 
-# ECS Service
+# Minimal ECS Service for ecspresso management
 resource "aws_ecs_service" "main" {
   name            = "${var.name}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+  desired_count   = 0  # ecspresso will manage this
 
-  network_configuration {
-    subnets          = var.private_subnet_ids
-    security_groups  = [aws_security_group.ecs.id]
-    assign_public_ip = false
-  }
-
-  dynamic "load_balancer" {
-    for_each = var.alb_configs
-    content {
-      target_group_arn = load_balancer.value.blue_target_group_arn
-      container_name   = var.name
-      container_port   = var.container_port
-      advanced_configuration {
-        alternate_target_group_arn = load_balancer.value.green_target_group_arn
-        production_listener_rule   = load_balancer.value.main_listener_rule_arn
-        test_listener_rule         = load_balancer.value.test_listener_rule_arn
-        role_arn                   = aws_iam_role.ecs_deployment_role.arn
-      }
-    }
-  }
-
-  deployment_controller {
-    type = "ECS"
-  }
-
-  deployment_configuration {
-    strategy             = "BLUE_GREEN"
-    bake_time_in_minutes = 0
-    lifecycle_hook {
-      hook_target_arn  = var.lambda_function_arn
-      role_arn         = aws_iam_role.ecs_deployment_role.arn
-      lifecycle_stages = ["POST_TEST_TRAFFIC_SHIFT"]
-    }
+  lifecycle {
+    ignore_changes = [
+      desired_count,
+      task_definition,
+      load_balancer,
+      deployment_configuration,
+      network_configuration,
+      deployment_circuit_breaker,
+      deployment_minimum_healthy_percent,
+      deployment_maximum_percent,
+      health_check_grace_period_seconds,
+      tags,
+      tags_all
+    ]
   }
 
   tags = merge(var.tags, {
@@ -215,7 +187,7 @@ resource "aws_iam_role_policy" "lambda_invoke_policy" {
         Action = [
           "lambda:InvokeFunction"
         ]
-        Resource = var.lambda_function_arn
+        Resource = "*"  # ecspresso will determine the specific Lambda
       }
     ]
   })

@@ -1,0 +1,84 @@
+{
+  "availabilityZoneRebalancing": "DISABLED",
+  "deploymentConfiguration": {
+    "bakeTimeInMinutes": 0,
+    "deploymentCircuitBreaker": {
+      "enable": true,
+      "rollback": true
+    },
+    "lifecycleHooks": [
+      {
+        "hookTargetArn": "{{ tfstate `module.ecs_hook_tokyo.aws_lambda_function.ecs_service_hook.arn` }}",
+        "lifecycleStages": [
+          "POST_TEST_TRAFFIC_SHIFT"
+        ],
+        "roleArn": "{{ tfstate `module.web_ecs_tokyo.aws_iam_role.ecs_deployment_role.arn` }}"
+      }
+    ],
+    "maximumPercent": 200,
+    "minimumHealthyPercent": 50,
+    "strategy": "BLUE_GREEN"
+  },
+  "deploymentController": {
+    "type": "ECS"
+  },
+  "desiredCount": 1,
+  "enableECSManagedTags": false,
+  "enableExecuteCommand": false,
+  "healthCheckGracePeriodSeconds": 60,
+  "launchType": "FARGATE",
+  "loadBalancers": [
+    {
+      "advancedConfiguration": {
+        "alternateTargetGroupArn": "{{ tfstate `module.web_alb_tokyo.aws_lb_target_group.green.arn` }}",
+        "productionListenerRule": "{{ tfstate `module.web_alb_tokyo.aws_lb_listener_rule.main_default.arn` }}",
+        "roleArn": "{{ tfstate `module.web_ecs_tokyo.aws_iam_role.ecs_deployment_role.arn` }}",
+        "testListenerRule": "{{ tfstate `module.web_alb_tokyo.aws_lb_listener_rule.test_default.arn` }}"
+      },
+      "containerName": "web",
+      "containerPort": 80,
+      "targetGroupArn": "{{ tfstate `module.web_alb_tokyo.aws_lb_target_group.blue.arn` }}"
+    },
+    {
+      "advancedConfiguration": {
+        "alternateTargetGroupArn": "{{ tfstate `module.api_alb_tokyo.aws_lb_target_group.green.arn` }}",
+        "productionListenerRule": "{{ tfstate `module.api_alb_tokyo.aws_lb_listener_rule.main_default.arn` }}",
+        "roleArn": "{{ tfstate `module.web_ecs_tokyo.aws_iam_role.ecs_deployment_role.arn` }}",
+        "testListenerRule": "{{ tfstate `module.api_alb_tokyo.aws_lb_listener_rule.test_default.arn` }}"
+      },
+      "containerName": "web",
+      "containerPort": 80,
+      "targetGroupArn": "{{ tfstate `module.api_alb_tokyo.aws_lb_target_group.blue.arn` }}"
+    }
+  ],
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "assignPublicIp": "DISABLED",
+      "securityGroups": [
+        "{{ tfstate `module.web_ecs_tokyo.aws_security_group.ecs.id` }}"
+      ],
+      "subnets": [
+        "{{ tfstate `module.vpc_tokyo.aws_subnet.private[0].id` }}",
+        "{{ tfstate `module.vpc_tokyo.aws_subnet.private[1].id` }}"
+      ]
+    }
+  },
+  "platformFamily": "Linux",
+  "platformVersion": "LATEST",
+  "propagateTags": "NONE",
+  "schedulingStrategy": "REPLICA",
+  "tags": [
+    {
+      "key": "Name",
+      "value": "web-service"
+    },
+    {
+      "key": "Environment",
+      "value": "dev"
+    },
+    {
+      "key": "Project",
+      "value": "terraform-aws"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "containerDefinitions": [
+    {
+      "cpu": 0,
+      "essential": true,
+      "image": "nginx:latest",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "{{ tfstate `module.web_ecs_tokyo.aws_cloudwatch_log_group.ecs.name` }}",
+          "awslogs-region": "{{ or (tfstate `module.web_ecs_tokyo.data.aws_region.current.id`) `ap-northeast-1` }}",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "name": "web",
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp"
+        }
+      ]
+    }
+  ],
+  "cpu": "256",
+  "executionRoleArn": "{{ tfstate `module.web_ecs_tokyo.aws_iam_role.ecs_execution_role.arn` }}",
+  "family": "web-task",
+  "memory": "512",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "tags": [
+    {
+      "key": "Name",
+      "value": "web-task"
+    },
+    {
+      "key": "Environment",
+      "value": "dev"
+    },
+    {
+      "key": "Project",
+      "value": "terraform-aws"
+    }
+  ]
+}
