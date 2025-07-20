@@ -5,7 +5,8 @@
   },
   "features": {
     "ghcr.io/devcontainers/features/terraform:1": {
-      "version": "latest"
+      "version": "latest",
+      "installTFsec": true
     },
     "ghcr.io/devcontainers/features/aws-cli:1": {
       "version": "latest"

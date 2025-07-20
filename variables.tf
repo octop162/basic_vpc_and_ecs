@@ -33,20 +33,8 @@ variable "common_tags" {
   }
 }
 
-variable "container_image" {
-  description = "Container image for ECS task"
-  type        = string
-  default     = "nginx:latest"
-}
-
 variable "container_port" {
   description = "Container port"
   type        = number
   default     = 80
-}
-
-variable "desired_count" {
-  description = "Desired number of ECS tasks"
-  type        = number
-  default     = 1
 }

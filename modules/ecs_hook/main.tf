@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.4.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -42,7 +46,7 @@ resource "aws_lambda_function" "ecs_service_hook" {
   handler          = "index.handler"
   runtime          = "python3.10"
   filename         = data.archive_file.lambda_function.output_path
-  source_code_hash = filebase64sha256("${data.archive_file.lambda_function.output_path}")
+  source_code_hash = filebase64sha256(data.archive_file.lambda_function.output_path)
   environment {
     variables = {
       TZ = "Asia/Tokyo"

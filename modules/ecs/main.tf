@@ -18,7 +18,7 @@ resource "aws_security_group" "ecs" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]  # Allow from VPC
+    cidr_blocks = ["10.0.0.0/8"] # Allow from VPC
   }
 
   egress {
@@ -78,14 +78,14 @@ resource "aws_ecs_service" "main" {
   name            = "${var.name}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = 0  # ecspresso will manage this
+  desired_count   = 0 # ecspresso will manage this
 
   # Minimal network configuration required for awsvpc mode
   network_configuration {
-    subnets          = var.private_subnet_ids
-    security_groups  = [aws_security_group.ecs.id]
+    subnets         = var.private_subnet_ids
+    security_groups = [aws_security_group.ecs.id]
   }
-  launch_type      = "FARGATE"
+  launch_type = "FARGATE"
 
   lifecycle {
     ignore_changes = [
@@ -146,8 +146,6 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Data source for current AWS region
-data "aws_region" "current" {}
 
 
 # IAM Role for ECS Deployment
@@ -195,7 +193,7 @@ resource "aws_iam_role_policy" "lambda_invoke_policy" {
         Action = [
           "lambda:InvokeFunction"
         ]
-        Resource = "*"  # ecspresso will determine the specific Lambda
+        Resource = "*" # ecspresso will determine the specific Lambda
       }
     ]
   })
