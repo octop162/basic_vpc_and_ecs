@@ -42,12 +42,12 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 resource "aws_iam_policy" "dynamodb_access" {
   name        = "DynamoDBAccessPolicy"
   description = "Policy to allow Lambda function to access DynamoDB"
-  policy      = jsonencode({
+  policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "dynamodb:PutItem",
           "dynamodb:GetItem",
           "dynamodb:UpdateItem",
@@ -87,7 +87,7 @@ resource "aws_lambda_function" "ecs_service_hook" {
 # Zip the Lambda function code
 data "archive_file" "lambda_function" {
   type        = "zip"
-  source_dir = "${path.module}/src"
+  source_dir  = "${path.module}/src"
   output_path = "${path.module}/src.zip"
 }
 
