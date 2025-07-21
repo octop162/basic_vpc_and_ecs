@@ -10,6 +10,7 @@
       {
         "hookTargetArn": "{{ tfstate `module.ecs_hook_tokyo.aws_lambda_function.ecs_service_hook.arn` }}",
         "lifecycleStages": [
+          "PRE_SCALE_UP",
           "POST_TEST_TRAFFIC_SHIFT"
         ],
         "roleArn": "{{ tfstate `module.web_ecs_tokyo.aws_iam_role.ecs_deployment_role.arn` }}"
