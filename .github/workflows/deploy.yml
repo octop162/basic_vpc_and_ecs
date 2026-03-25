@@ -108,7 +108,7 @@ jobs:
 
   verify:
     name: Verify Deployment
-    needs: approve
+    needs: [build, approve]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -125,5 +125,7 @@ jobs:
           version: latest
 
       - name: Verify deployment
+        env:
+          IMAGE_URI: ${{ needs.build.outputs.image_uri }}
         run: |
           ecspresso verify --config ecspresso.yml
