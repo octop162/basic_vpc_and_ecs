@@ -127,6 +127,37 @@ aws iam put-role-policy \
       }
     ]
   }"
+
+# ecspresso verify 用（IAM ロール確認 + CloudWatch Logs）
+aws iam put-role-policy \
+  --role-name github-actions-deploy \
+  --policy-name ecspresso-verify \
+  --policy-document "{
+    \"Version\": \"2012-10-17\",
+    \"Statement\": [
+      {
+        \"Effect\": \"Allow\",
+        \"Action\": [
+          \"iam:GetRole\",
+          \"sts:AssumeRole\"
+        ],
+        \"Resource\": [
+          \"arn:aws:iam::${ACCOUNT_ID}:role/web-ecs-execution-role\",
+          \"arn:aws:iam::${ACCOUNT_ID}:role/web-ecs-deployment-role\"
+        ]
+      },
+      {
+        \"Effect\": \"Allow\",
+        \"Action\": [
+          \"logs:CreateLogStream\",
+          \"logs:PutLogEvents\",
+          \"logs:DescribeLogGroups\",
+          \"logs:DescribeLogStreams\"
+        ],
+        \"Resource\": \"arn:aws:logs:ap-northeast-1:${ACCOUNT_ID}:log-group:/ecs/*\"
+      }
+    ]
+  }"
 ```
 
 ## 5. GitHub リポジトリ設定
