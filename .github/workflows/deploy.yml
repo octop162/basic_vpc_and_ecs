@@ -65,10 +65,6 @@ jobs:
         with:
           version: latest
 
-      - name: Download tfstate for ecspresso
-        run: |
-          aws s3 cp "${{ secrets.TFSTATE_S3_URI }}" terraform.tfstate
-
       - name: Deploy ECS service
         run: |
           ecspresso deploy \
@@ -126,10 +122,6 @@ jobs:
         uses: kayac/ecspresso@v2
         with:
           version: latest
-
-      - name: Download tfstate for ecspresso
-        run: |
-          aws s3 cp "${{ secrets.TFSTATE_S3_URI }}" terraform.tfstate
 
       - name: Verify deployment
         run: |

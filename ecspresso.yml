@@ -8,4 +8,4 @@ timeout: "10m0s"
 plugins:
   - name: tfstate
     config:
-      path: terraform.tfstate
+      url: s3://octop162-terraform-state/basic-vpc-and-ecs/terraform.tfstate

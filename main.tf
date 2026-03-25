@@ -6,6 +6,12 @@ terraform {
       version = "~> 6.4.0"
     }
   }
+
+  backend "s3" {
+    bucket = "octop162-terraform-state"
+    key    = "basic-vpc-and-ecs/terraform.tfstate"
+    region = "ap-northeast-1"
+  }
 }
 
 provider "aws" {
