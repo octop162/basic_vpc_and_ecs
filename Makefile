@@ -48,7 +48,7 @@ quality: fmt validate lint security
 # Development workflow
 dev: init fmt validate lint plan
 
-# Deploy ECS service using ecspresso
+# Deploy ECS service using ecspresso (IMAGE_URI=xxx required)
 ecs-deploy:
 	ecspresso deploy --config ecspresso.yml --no-wait
 
