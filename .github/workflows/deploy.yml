@@ -91,7 +91,7 @@ jobs:
           DEPLOY_ARN=$(aws ecs list-service-deployments \
             --service "${ECS_SERVICE}" \
             --cluster "${ECS_CLUSTER}" \
-            --status ACTIVE \
+            --status IN_PROGRESS \
             --query 'serviceDeployments[0].serviceDeploymentArn' \
             --output text)
           echo "arn=${DEPLOY_ARN}" >> "$GITHUB_OUTPUT"

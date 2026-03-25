@@ -110,6 +110,25 @@ aws iam put-role-policy \
   }"
 ```
 
+# iam:PassRole（ECS デプロイ時に deployment/execution ロールを渡すため）
+aws iam put-role-policy \
+  --role-name github-actions-deploy \
+  --policy-name ecs-pass-role \
+  --policy-document "{
+    \"Version\": \"2012-10-17\",
+    \"Statement\": [
+      {
+        \"Effect\": \"Allow\",
+        \"Action\": \"iam:PassRole\",
+        \"Resource\": [
+          \"arn:aws:iam::${ACCOUNT_ID}:role/web-ecs-deployment-role\",
+          \"arn:aws:iam::${ACCOUNT_ID}:role/web-ecs-execution-role\"
+        ]
+      }
+    ]
+  }"
+```
+
 ## 5. GitHub リポジトリ設定
 
 ### Secrets
