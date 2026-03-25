@@ -3,3 +3,10 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "slack_webhook_url" {
+  description = "Slack Incoming Webhook URL for deploy notifications"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

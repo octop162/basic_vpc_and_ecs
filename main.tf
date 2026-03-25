@@ -30,12 +30,28 @@ module "vpc_tokyo" {
   })
 }
 
+module "ecr_tokyo" {
+  source = "./modules/ecr"
+
+  providers = {
+    aws = aws.tokyo
+  }
+
+  name = "web"
+
+  tags = merge(var.common_tags, {
+    Region = "ap-northeast-1"
+  })
+}
+
 module "ecs_hook_tokyo" {
   source = "./modules/ecs_hook"
 
   providers = {
     aws = aws.tokyo
   }
+
+  slack_webhook_url = var.slack_webhook_url
 
   tags = merge(var.common_tags, {
     Region = "ap-northeast-1"

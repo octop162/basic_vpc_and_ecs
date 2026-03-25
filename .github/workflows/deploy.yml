@@ -1,0 +1,136 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: web
+  ECS_CLUSTER: web-cluster
+  ECS_SERVICE: web-service
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_uri: ${{ steps.meta.outputs.image_uri }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: meta
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          IMAGE_TAG="${GITHUB_SHA::8}"
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker build -t "${IMAGE_URI}" .
+          docker push "${IMAGE_URI}"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy (ecspresso)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup ecspresso
+        uses: kayac/ecspresso@v2
+        with:
+          version: latest
+
+      - name: Download tfstate for ecspresso
+        run: |
+          aws s3 cp "${{ secrets.TFSTATE_S3_URI }}" terraform.tfstate
+
+      - name: Deploy ECS service
+        run: |
+          ecspresso deploy \
+            --config ecspresso.yml \
+            --image-uri "${{ needs.build.outputs.image_uri }}" \
+            --no-wait
+
+  approve:
+    name: Approve Production Traffic
+    needs: deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get deployment ARN
+        id: deploy-arn
+        run: |
+          DEPLOY_ARN=$(aws ecs list-service-deployments \
+            --service "${ECS_SERVICE}" \
+            --cluster "${ECS_CLUSTER}" \
+            --status ACTIVE \
+            --query 'serviceDeployments[0].serviceDeploymentArn' \
+            --output text)
+          echo "arn=${DEPLOY_ARN}" >> "$GITHUB_OUTPUT"
+
+      - name: Write approval to SSM
+        run: |
+          DEPLOY_ID=$(echo "${{ steps.deploy-arn.outputs.arn }}" | rev | cut -d'/' -f1 | rev)
+          aws ssm put-parameter \
+            --name "/ecs-deploy/${DEPLOY_ID}" \
+            --value "CONFIRMED" \
+            --type String \
+            --overwrite
+          echo "Approval written for deployment: ${DEPLOY_ID}"
+
+  verify:
+    name: Verify Deployment
+    needs: approve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup ecspresso
+        uses: kayac/ecspresso@v2
+        with:
+          version: latest
+
+      - name: Download tfstate for ecspresso
+        run: |
+          aws s3 cp "${{ secrets.TFSTATE_S3_URI }}" terraform.tfstate
+
+      - name: Verify deployment
+        run: |
+          ecspresso verify --config ecspresso.yml
